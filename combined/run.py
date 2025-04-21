@@ -13,7 +13,7 @@ coef = 0.5 # proportional control coefficient
 maxTime = 10
 logTime = np.arange(0.0, maxTime, dt)
 
-jointIndices = [1,3,5]
+jointIndices = [1, 3, 5]
 eefLinkIdx = 6
 
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -40,6 +40,18 @@ def updateCamPos(cam):
     rotMat = np.reshape(np.array(rotMat),(3,3))
     camera.set_new_position(xyz, rotMat)
 
+def moveCamPos(pos, orn):
+    jointPos = p.calculateInverseKinematics(boxId, eefLinkIdx, pos, orn)
+    print(jointPos)
+    p.setJointMotorControlArray(
+        bodyIndex=boxId,
+        jointIndices=jointIndices,
+        targetPositions=jointPos,
+        controlMode=p.POSITION_CONTROL
+    )
+    for _ in range(100):
+        p.stepSimulation()
+
 # start pybullet and move point of view
 physicsClient = p.connect(p.GUI, options="--background_color_red=1 --background_color_blue=1 --background_color_green=1")
 p.resetDebugVisualizerCamera(
@@ -57,9 +69,9 @@ x = p.loadTexture('aruco_cube.png')
 p.changeVisualShape(c, -1, textureUniqueId=x)
 
 # go to the desired position
-p.setJointMotorControlArray(bodyIndex=boxId, jointIndices=jointIndices, targetPositions=[0.0, 1.5708, 0.0], controlMode=p.POSITION_CONTROL)
-for _ in range(100):
-    p.stepSimulation()
+desiredPos = [0.5, 0.5, 0.3]
+desiredOrn = p.getQuaternionFromEuler([0,0,np.pi/2])
+moveCamPos(desiredPos, desiredOrn)
 
 # get aruco coordinates in the desired position
 updateCamPos(camera)
@@ -70,9 +82,9 @@ sd0 = np.array([(s-IMG_HALF)/IMG_HALF for s in sd0])
 sd = np.reshape(np.array(corners[0][0]),(8,1)).astype(int)
 
 # go to the starting position
-p.setJointMotorControlArray(bodyIndex=boxId, jointIndices=jointIndices, targetPositions=[0.1, 1.4708, 0.1], controlMode=p.POSITION_CONTROL)
-for _ in range(100):
-    p.stepSimulation()
+startPos = [0.55, 0.45, 0.35]
+startOrn = p.getQuaternionFromEuler([0,0,np.pi/2])
+moveCamPos(startPos, startOrn)
 
 camCount = 0
 # cartesian velocity vector
